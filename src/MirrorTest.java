@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package demos.gears;
+package nehe.demos.common;
 
 import com.sun.opengl.util.FPSAnimator;
 import com.sun.opengl.util.GLUT;
@@ -29,6 +29,10 @@ import javax.swing.JFrame;
 public class MirrorTest implements GLEventListener, MouseListener {
 
     private static GLCanvas glcanvas;
+    private Point3D first = new Point3D(-10, 25, -30);
+    private Point3D second = new Point3D(-10, 5, 10);
+    private Point3D third = new Point3D(10, 5, 10);
+    private Point3D fourth = new Point3D(10, 25, -30);
 
     private static void initialize(GL gl) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
@@ -37,8 +41,8 @@ public class MirrorTest implements GLEventListener, MouseListener {
     GLU glu = new GLU();
     GLUT glut = new GLUT();
     // width and height of the window
-    int g_width = 480;
-    int g_height = 360;
+    int g_width = 900;
+    int g_height = 600;
     // light 0 position
     float[] g_light0_pos = {10.0f, 5.0f, 0.0f, 1.0f};
     float g_inc = 0.0f;
@@ -53,7 +57,7 @@ public class MirrorTest implements GLEventListener, MouseListener {
         glcanvas = new GLCanvas(capabilities);
         MirrorTest triangledepthtest = new MirrorTest();
         glcanvas.addGLEventListener(triangledepthtest);
-        glcanvas.setSize(400, 400);
+        glcanvas.setSize(900, 600);
         final FPSAnimator animator = new FPSAnimator(glcanvas, 60, true);
         final JFrame frame = new JFrame("3d  Triangle (solid)");
         frame.getContentPane().add(glcanvas);
@@ -74,6 +78,7 @@ public class MirrorTest implements GLEventListener, MouseListener {
         });
         animator.start();
     }
+    private float val = 2;
 
     public void init(GLAutoDrawable drawable) {
         GL gl = drawable.getGL();
@@ -110,7 +115,6 @@ public class MirrorTest implements GLEventListener, MouseListener {
         //  gl.glLoadIdentity();
         float angle = 0.0f;
         float angleUp = 0.0f;
-        float val = 10.0f;
         IntBuffer buffers = IntBuffer.wrap(new int[]{GL.GL_NONE});
 
         // get the current color buffer being drawn to
@@ -157,20 +161,26 @@ public class MirrorTest implements GLEventListener, MouseListener {
         // draw the mirror image
         gl.glPushMatrix();
         // invert image about xy plane
-        gl.glScalef(1.0f, -1.0f, 1.0f);
-
+//        gl.glScalef(1.0f, -1.0f, 1.0f);
+        Point3D normal = Utils.getNormalVectorByMatrix(getKefByPoints(first, fourth, third)).multiply(1);
+        float[] matr = getReflMatrix(first, normal.normalize());
+        gl.glBegin(GL.GL_LINES);
+        gl.glColor3f(1, 0, 0);
+        gl.glVertex3f(0, 0, 0);
+        gl.glVertex3f(normal.x * 10, normal.y * 10, normal.z * 10);
+        gl.glEnd();
+        System.out.println(normal);
+        gl.glMultMatrixf(matr, 0);
 //        // invert the clipping plane based on the view point
 //        if (Math.cos(angle * Math.PI / 180.0) < 0.0) {
 //            eqn1[2] = -1.0;
 //        } else {
 //            eqn1[2] = 1.0;
 //        }
-
         // clip one side of the plane
 //        DoubleBuffer db = DoubleBuffer.wrap(eqn1);
 //        gl.glClipPlane(GL.GL_CLIP_PLANE0, db);
 //        gl.glEnable(GL.GL_CLIP_PLANE0);
-
         // draw only where the stencil buffer == 1
         gl.glStencilFunc(GL.GL_EQUAL, 0x1, 0x1);
         // draw the object
@@ -268,10 +278,10 @@ public class MirrorTest implements GLEventListener, MouseListener {
 //        gl.glVertex3f(val, -val, 0.0f);
 //    }
     void mirror(GL gl, float val) {
-        gl.glVertex3f(val, 0.0f, val);
-        gl.glVertex3f(-val, 0.0f, val);
-        gl.glVertex3f(-val, 0.0f, -val);
-        gl.glVertex3f(val, 0.0f, -val);
+        gl.glVertex3f(val * first.x, val * first.y, val * first.z);
+        gl.glVertex3f(val * second.x, val * second.y, val * second.z);
+        gl.glVertex3f(val * third.x, val * third.y, val * third.z);
+        gl.glVertex3f(val * fourth.x, val * fourth.y, val * fourth.z);
     }
 
     private float angle = 0f;
@@ -521,4 +531,90 @@ public class MirrorTest implements GLEventListener, MouseListener {
 
     public void mouseExited(MouseEvent me) {
     }
+
+    void reflectionmatrix(float[][] reflection_matrix,
+            float[] p,
+            float[] v) {
+        float pv = p[0] * v[0] + p[1] * v[1] + p[2] * v[2];
+
+        reflection_matrix[0][0] = 1 - 2 * v[0] * v[0];
+        reflection_matrix[1][0] = - 2 * v[0] * v[1];
+        reflection_matrix[2][0] = - 2 * v[0] * v[2];
+        reflection_matrix[3][0] = 2 * pv * v[0];
+
+        reflection_matrix[0][1] = - 2 * v[0] * v[1];
+        reflection_matrix[1][1] = 1 - 2 * v[1] * v[1];
+        reflection_matrix[2][1] = - 2 * v[1] * v[2];
+        reflection_matrix[3][1] = 2 * pv * v[1];
+
+        reflection_matrix[0][2] = - 2 * v[0] * v[2];
+        reflection_matrix[1][2] = - 2 * v[1] * v[2];
+        reflection_matrix[2][2] = 1 - 2 * v[2] * v[2];
+        reflection_matrix[3][2] = 2 * pv * v[2];
+
+        reflection_matrix[0][3] = 0;
+        reflection_matrix[1][3] = 0;
+        reflection_matrix[2][3] = 0;
+        reflection_matrix[3][3] = 1;
+    }
+
+    private float[] getReflMatrix(Point3D point, Point3D vector) {
+        float[][] res = new float[4][4];
+        float[] points = new float[]{point.x, point.y, point.z};
+        float[] vectors = new float[]{vector.x, vector.y, vector.z};
+        reflectionmatrix(res, points, vectors);
+        float[] sss = new float[res.length * res[0].length];
+        int zz = 0;
+        for (int i = 0; i < res.length; i++) {
+            for (int j = 0; j < res[0].length; j++) {
+                sss[zz++] = res[i][j];
+                System.out.print(res[i][j] + " ");
+            }
+            System.out.println("");
+        }
+        return sss;
+    }
+
+    public double[] getKefByPoints(Point3D a, Point3D b, Point3D c) {
+        double[] arr = new double[4];
+        arr[0] = 0;
+        arr[1] = 0;
+        arr[2] = 0;
+        arr[3] = 0;
+//        double[][] A = new double[][]{{1, a.y, a.z}, {1, b.y, b.z}, {1, c.y, c.z}};
+//        double[][] B = new double[][]{{a.x, 1, a.z}, {b.x, 1, b.z}, {c.x, 1, c.z}};
+//        double[][] C = new double[][]{{a.x, a.y, 1}, {b.x, b.y, 1}, {c.x, c.y, 1}};
+//        double[][] D = new double[][]{{a.z, a.y, a.x}, {b.y, b.y, b.x}, {c.y, c.y, c.x}};
+//        arr[0] = (float) MatrixOperations.det(MatrixOperations.transpose(A));
+//        arr[1] = (float) MatrixOperations.det(MatrixOperations.transpose(B));
+//        arr[2] = (float) MatrixOperations.det(MatrixOperations.transpose(C));
+//        arr[3] = (float) MatrixOperations.det(MatrixOperations.transpose(D));
+//        return arr;
+        double k2 = a.x - b.x;
+
+        if (k2 == 0) {
+            return arr;
+        }
+
+        //-------------------
+        arr[0] = a.y * (b.z - c.z) + b.y * (c.z - a.z) + c.y * (a.z - b.z);
+        arr[1] = a.z * (b.x - c.x) + b.z * (c.x - a.x) + c.z * (a.x - b.x);
+        arr[2] = a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y);
+        arr[3] = -(a.x * (b.y * c.z - c.y * b.z) + b.x * (c.y * a.z - a.y * c.z)
+                + c.x * (a.y * b.z - b.y * a.z));
+        return arr;
+
+    }
+//    public double[] getKefByPoints(Point3D a, Point3D b, Point3D c) {
+//        double[] arr = new double[4];
+//        double[][] A = new double[][]{{1, b.y, c.z}, {1, b.y, c.z}, {1, b.y, c.z}};
+//        double[][] B = new double[][]{{a.x, 1, c.z}, {a.x, 1, c.z}, {a.x, 1, c.z}};
+//        double[][] C = new double[][]{{a.x, b.y, 1}, {a.x, b.y, 1}, {a.x, b.y, 1}};
+//        double[][] D = new double[][]{{a.x, b.y, c.z}, {a.x, b.y, c.z}, {a.x, b.y, c.z}};
+//        arr[0] = (float) MatrixOperations.det(MatrixOperations.transpose(A));
+//        arr[1] = (float) MatrixOperations.det(MatrixOperations.transpose(B));
+//        arr[2] = (float) MatrixOperations.det(MatrixOperations.transpose(C));
+//        arr[3] = -(float) MatrixOperations.det(D);
+//        return arr;
+//    }
 }
