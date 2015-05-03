@@ -32,10 +32,10 @@ public class MirrorTest implements GLEventListener, MouseListener {
 
     private static GLCanvas glcanvas;
     private static MainViewFrame frame;
-    private Point3D first = new Point3D(-10, 10, -30);
-    private Point3D second = new Point3D(-10, 10, 10);
-    private Point3D third = new Point3D(10, -10, 10);
-    private Point3D fourth = new Point3D(10, -10, -30);
+    private Point3D first = new Point3D(-10, 0, -30);
+    private Point3D second = new Point3D(-10, 0, 10);
+    private Point3D third = new Point3D(10, 0, 10);
+    private Point3D fourth = new Point3D(10, 0, -30);
 
     private static void initialize(GL gl) {
 
@@ -60,6 +60,7 @@ public class MirrorTest implements GLEventListener, MouseListener {
         glcanvas = new GLCanvas(capabilities);
         MirrorTest triangledepthtest = new MirrorTest();
         glcanvas.addGLEventListener(triangledepthtest);
+        glcanvas.addKeyListener(new KeyboardController());
         glcanvas.setSize(900, 600);
         final FPSAnimator animator = new FPSAnimator(glcanvas, 60, true);
         frame = new MainViewFrame();
@@ -115,7 +116,11 @@ public class MirrorTest implements GLEventListener, MouseListener {
     public void display(GLAutoDrawable drawable) {
 
         GL gl = drawable.getGL();
-        //  gl.glLoadIdentity();
+        gl.glLoadIdentity();
+        gl.glTranslatef(Common.cameraOffsetX, Common.cameraOffsetY, Common.cameraOffsetZ);
+        gl.glRotatef(Common.cameraAngleX, 1.0f, 0.0f, 0.0f);
+        gl.glRotatef(Common.cameraAngleY, 0.0f, 1.0f, 0.0f);
+        gl.glRotatef(Common.cameraAngleZ, 0.0f, 0.0f, 1.0f);
         float angle = 0.0f;
         float angleUp = 0.0f;
         IntBuffer buffers = IntBuffer.wrap(new int[]{GL.GL_NONE});
@@ -147,11 +152,11 @@ public class MirrorTest implements GLEventListener, MouseListener {
         gl.glEnable(GL.GL_STENCIL_TEST);
 
         // draw the stencil mask
-        //gl.glRotatef(angleMirror, 1, 0, 0);
+        gl.glRotatef(angleMirror, 0, 0, 1);
         gl.glBegin(GL.GL_QUADS);
         mirror(gl, val);
         gl.glEnd();
-//        gl.glRotatef(-angleMirror, 1, 0, 0);
+        gl.glRotatef(-angleMirror, 0, 0, 1);
         // reenable drawing to color buffer
         gl.glDrawBuffer(buffers.get(0));
         // make stencil buffer read only
@@ -165,7 +170,7 @@ public class MirrorTest implements GLEventListener, MouseListener {
         // invert image about xy plane
 //        gl.glScalef(1.0f, -1.0f, 1.0f);
         Point3D normal = Utils.getNormalVectorByMatrix(getKefByPoints(first, fourth, third)).multiply(1);
-       //rorateAroundAxis(normal, new Point3D(1, 0, 0), Math.toRadians(angleMirror));
+        rorateAroundAxis(normal, new Point3D(0, 0, 1), Math.toRadians(angleMirror));
         pointsFirstFigure();
         pointsSecondFigure();
         pointsThirdFigure();
@@ -183,7 +188,7 @@ public class MirrorTest implements GLEventListener, MouseListener {
         resultList.addAll(listSecond);
         resultList.addAll(listThird);
         intersect(gl, resultList, new Point3D(0, 0, 0), normal);
-        float[] matr = getReflMatrix(first, normal.normalize());
+        float[] matr = getReflMatrix(new Point3D(0, 0, 0), normal.normalize());
         gl.glBegin(GL.GL_LINES);
         gl.glColor3f(1, 0, 0);
         gl.glVertex3f(0, 0, 0);
@@ -198,7 +203,7 @@ public class MirrorTest implements GLEventListener, MouseListener {
 //            eqn1[2] = 1.0;
 //        }
         // clip one side of the plane
-        DoubleBuffer db = DoubleBuffer.wrap(Utils.getMatrixByPointAndNormalVectors(first, normal.multiply(-1)));
+        DoubleBuffer db = DoubleBuffer.wrap(Utils.getMatrixByPointAndNormalVectors(new Point3D(0,0,0), normal.multiply(-1)));
         gl.glClipPlane(GL.GL_CLIP_PLANE0, db);
         gl.glEnable(GL.GL_CLIP_PLANE0);
         // draw only where the stencil buffer == 1
@@ -217,11 +222,11 @@ public class MirrorTest implements GLEventListener, MouseListener {
 
         // draw the mirror pane into depth buffer -
         // to prevent object behind mirror from being render
-       // gl.glRotatef(angleMirror, 1, 0, 0);
+        gl.glRotatef(angleMirror, 0, 0, 1);
         gl.glBegin(GL.GL_QUADS);
         mirror(gl, val);
         gl.glEnd();
-      //  gl.glRotatef(-angleMirror, 1, 0, 0);
+        gl.glRotatef(-angleMirror, 0, 0, 1);
         // enable drawing to the color buffer
         gl.glDrawBuffer(buffers.get());
 
@@ -229,16 +234,20 @@ public class MirrorTest implements GLEventListener, MouseListener {
         gl.glPushMatrix();
         render(gl);
         gl.glPopMatrix();
+        gl.glPushMatrix();
+        gl.glMultMatrixf(matr, 0);
+        render(gl);
+        gl.glPopMatrix();
 
         // draw the outline of the mirror
         gl.glColor3f(0.4f, 0.4f, 1.0f);
 
-//        gl.glRotatef(angleMirror, 1, 0, 0);
+        gl.glRotatef(angleMirror, 0, 0, 1);
 
         gl.glBegin(GL.GL_LINE_LOOP);
         mirror(gl, val);
         gl.glEnd();
-//        gl.glRotatef(-angleMirror, 1, 0, 0);
+        gl.glRotatef(-angleMirror, 0, 0, 1);
 
         // mirror shine
         gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
@@ -250,12 +259,12 @@ public class MirrorTest implements GLEventListener, MouseListener {
         gl.glColor4f(1.0f, 1.0f, 1.0f, .2f);
 //        gl.glTranslatef(0.0f, 0.0f, (float) (0.001f * eqn1[2]));
 
-//        gl.glRotatef(angleMirror, 1, 0, 0);
+        gl.glRotatef(angleMirror, 0, 0, 1);
 
         gl.glBegin(GL.GL_QUADS);
         mirror(gl, val);
         gl.glEnd();
-//        gl.glRotatef(-angleMirror, 1, 0, 0);
+        gl.glRotatef(-angleMirror, 0, 0, 1);
 
         gl.glDisable(GL.GL_BLEND);
         gl.glDepthMask(true);
